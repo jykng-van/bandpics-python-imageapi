@@ -11,7 +11,7 @@ setup(
     description="The image handler API for bandpics",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/xxxx/fastapi-quickstart",
+    url="https://github.com/jykng-van/bandpics-python-imageapi",
     packages=find_packages(),
     include_package_data=True,
     package_data={"fastapi_quickstart": ["templates/*"]},
