@@ -1,4 +1,5 @@
 from pytest import fixture
+from unittest.mock import MagicMock, AsyncMock
 from mongomock import MongoClient
 from fastapi.testclient import TestClient
 from bson import ObjectId
@@ -116,3 +117,31 @@ def get_image_id2():
 @fixture
 def get_group2_id():
     return test_group2_id
+@fixture
+def mock_executor():
+    def mock_get_executor():
+        return MagicMock()
+
+    return mock_get_executor
+
+def mock_upload_image(*args, **kwargs):
+    group = args[0]
+    filename = args[1]
+    return {
+        'filename':filename,
+        'files':[
+            f"{group}/original/{filename}",
+            f"{group}/fullsize/{filename}",
+            f"{group}/thumb/{filename}"
+        ]
+    }
+@fixture
+def mock_s3_handler():
+
+    def mock_get_s3_handler():
+        s3 = MagicMock()
+        s3.upload_image = AsyncMock(side_effect=mock_upload_image)
+        s3.move_image = AsyncMock()
+        s3.delete_image = AsyncMock()
+        return s3
+    return mock_get_s3_handler

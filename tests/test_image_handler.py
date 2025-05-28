@@ -5,8 +5,6 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from datetime import datetime
 #from collections.abc import MutableMapping
 
-import sys
-sys.path.append('..') # Add the parent directory to the path
 from app.image_handler import ImageHandler # We're testing the ImageHandler class
 
 class test_image_handler(unittest.TestCase):

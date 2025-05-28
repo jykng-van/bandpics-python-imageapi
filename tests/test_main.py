@@ -1,12 +1,14 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, AsyncMock
 from io import BytesIO, BufferedReader
 from PIL import Image
 import pytest
 from mongomock import MongoClient
 from datetime import datetime, timezone
 from http import HTTPStatus
+from tests.conftest import mock_upload_image
+from bson.objectid import ObjectId
 
-from app.main import app, add_images_to_group
+from app.main import app, add_images_to_group, upload_single_image, setup_s3_handler
 from app.db import connect_to_db
 
 # test get_images
@@ -53,9 +55,10 @@ def test_edit_images_404(client, mock_mongodb_image_groups_initialized):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_delete_group(client, mock_mongodb_image_groups_initialized, get_group_id):
+def test_delete_group(client, mock_mongodb_image_groups_initialized, get_group_id, mock_s3_handler):
     # we're using our mock_mongodb_image_groups_initialized fixture which has image_groups and images initialized
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
     response = client.delete("/image_groups/" + str(get_group_id))
 
     json = response.json()
@@ -119,6 +122,21 @@ ImageHandler.return_value.get_date_and_coords.return_value = {
     }
 }
 
+# test upload an image
+@pytest.mark.asyncio
+async def test_upload_single_image(get_group_id,):
+    mock_mongoclient = MongoClient()
+    mock_mongodb = mock_mongoclient.db
+    mock_image = MockUploadImage('test1.jpeg', create_dummy_image('test1','jpeg'))
+    images_collection = mock_mongodb.get_collection('image_collection')
+
+    #mock s3 related functions
+    s3 = MagicMock()
+    s3.upload_image = AsyncMock(side_effect=mock_upload_image)
+    image_data = await upload_single_image(ObjectId(get_group_id), mock_image, images_collection, s3)
+    print(image_data)
+    assert '_id' in image_data, 'Image id expected in results'
+
 # test add_images_to_group the one that's shared by upload_images and upload_images_to_group
 @pytest.mark.asyncio
 async def test_add_images_to_group(get_group_id):
@@ -130,28 +148,34 @@ async def test_add_images_to_group(get_group_id):
     ]
 
 
-    image_data = await add_images_to_group(get_group_id, mock_upload_images, mock_mongodb)
+    #mock s3 related functions
+    s3 = MagicMock()
+    s3.upload_image = AsyncMock(side_effect=mock_upload_image)
+    image_data = await add_images_to_group(get_group_id, mock_upload_images, mock_mongodb, s3)
     print(image_data)
     assert len(image_data) == len(mock_upload_images)
     assert image_data[0]['filename'] == 'test1.jpeg', "Unexpected filename"
     assert image_data[1]['filename'] == 'test2.jpeg', "Unexpected filename"
 # test upload_images the one that creates a new group
-def test_upload_images(client, mock_mongodb):
+def test_upload_images(client, mock_mongodb, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
     mock_upload_images = [
         ('images',create_dummy_image_buffered_reader('test1','jpeg')),
         ('images',create_dummy_image_buffered_reader('test2','jpeg')),
     ]
 
     print('mock_upload_images:', mock_upload_images)
+
     response = client.post("/image_groups/", data={'name':'test'}, files=mock_upload_images)
     print('request:', response.request)
     json = response.json()
     assert response.status_code == HTTPStatus.OK
     assert 'images' in json and len(json['images']) > 0, "No images in group" # check if images are present
 # test upload_images_to_group the one that adds images to an existing group
-def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_groups_initialized):
+def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
     mock_upload_images = [
         ('images',create_dummy_image_buffered_reader('test1','jpeg')),
         ('images',create_dummy_image_buffered_reader('test2','jpeg')),
@@ -187,8 +211,9 @@ def test_get_image_404(client, mock_mongodb_image_groups_initialized):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_edit_image(client, mock_mongodb_image_groups_initialized, get_image_id1, get_group2_id):
+def test_edit_image(client, mock_mongodb_image_groups_initialized, get_image_id1, get_group2_id, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
 
     new_description = 'New description'
     image_changes = {
@@ -215,15 +240,16 @@ def test_edit_image_404(client, mock_mongodb_image_groups_initialized):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_edit_image_upload(client, mock_mongodb_image_groups_initialized, get_image_id1):
+def test_edit_image_upload(client, mock_mongodb_image_groups_initialized, get_image_id1, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
 
     filehandle = 'test1'
-    mock_upload_image = ('image',create_dummy_image_buffered_reader(filehandle,'jpeg')),
+    mock_upload_image = create_dummy_image_buffer(filehandle,'jpeg') #('image',create_dummy_image_buffered_reader(filehandle,'jpeg'))
 
 
     print('mock_upload_image:', mock_upload_image)
-    response = client.patch("/images/" + str(get_image_id1) + "/file", files=mock_upload_image)
+    response = client.patch("/images/" + str(get_image_id1) + "/file", files={'image':mock_upload_image})
     json = response.json()
     print('json:', json)
     assert response.status_code == HTTPStatus.OK
@@ -232,13 +258,14 @@ def test_edit_image_upload_404(client, mock_mongodb_image_groups_initialized):
     # we're using our mock_mongodb_image_groups_initialized fixture which has image_groups and images initialized
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     filehandle = 'test1'
-    mock_upload_image = ('image',create_dummy_image_buffered_reader(filehandle,'jpeg')),
-    response = client.patch("/images/" + 'bbbbbbbbbbbbbbbbbbbbbbbb' + '/file', files=mock_upload_image)
+    mock_upload_image = create_dummy_image(filehandle,'jpeg')
+    response = client.patch("/images/" + 'bbbbbbbbbbbbbbbbbbbbbbbb' + '/file', files={'image':mock_upload_image})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_delete_image(client, mock_mongodb_image_groups_initialized, get_image_id1):
+def test_delete_image(client, mock_mongodb_image_groups_initialized, get_image_id1, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+    app.dependency_overrides[setup_s3_handler] = mock_s3_handler
 
     response = client.delete("/images/" + str(get_image_id1))
     json = response.json()
