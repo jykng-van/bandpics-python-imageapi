@@ -279,6 +279,11 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         print(results)
         assert 'files' in results, 'Files not in results'
         s3 = boto3.resource("s3")
+
+        assert f"{group}/original/{filename}" in results['files'], "Original name doesn't match"
+        assert f"{group}/fullsize/{filename}" in results['files'], "Fullsize name doesn't match"
+        assert f"{group}/thumb/{filename}" in results['files'], "Thumbnail name doesn't match"
+
         for result in results['files']:
             object = s3.Object(self.bucket_name, result)
             image = object.get()

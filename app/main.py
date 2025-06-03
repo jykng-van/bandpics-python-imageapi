@@ -89,7 +89,7 @@ async def upload_single_image(group: ObjectId, image:UploadFile, images_collecti
     date_and_coords = image_handler.get_date_and_coords() #get dat and coordinates from image
     print('Date and coords:', date_and_coords)
 
-    fileinfo = await s3.upload_image(group, image.filename, image_content)
+    fileinfo = await s3.upload_image(str(group), image.filename, image_content)
 
     # insert into db
     inserted_image = images_collection.insert_one({
@@ -102,6 +102,7 @@ async def upload_single_image(group: ObjectId, image:UploadFile, images_collecti
     return {
         '_id': str(inserted_image.inserted_id),
         'filename': fileinfo['filename'],
+        'files':fileinfo['files'],
         'data': date_and_coords,
     }
 

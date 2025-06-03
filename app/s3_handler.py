@@ -8,6 +8,7 @@ import piexif
 import io
 import asyncio
 import re
+import mimetypes
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -38,10 +39,12 @@ class S3Handler:
     def upload_file(self, file_bytes, prefix, filename):
         try:
             print(f"Bucket: {self.bucket_name}")
+            mime, encoding = mimetypes.guess_type(filename)
             s3_task = self.s3_client.put_object(
                 Body=file_bytes,
                 Bucket=self.bucket_name,
                 Key=f"{prefix}/{filename}",
+                ContentType=mime
             )
             print(f"File {prefix}/{filename} (Etag: {s3_task['ETag']}) uploaded")
             return s3_task
@@ -133,16 +136,23 @@ class S3Handler:
         if self.file_exists(proposed_key): #prevent overwrite
             new_key = self.number_matching_files(new_key)
             filename = os.path.basename(new_key)
-        original_path = f"{group}/original"
+
 
         with ThreadPoolExecutor() as pool:
-            tasks.append(loop.run_in_executor(pool, self.upload_file, io.BytesIO(bytes), original_path, filename)) #upload original image
-
-
             max_size = self.fullsize_side #max size for longest side
 
             display_image = Image.open(io.BytesIO(bytes))
             display_exif = self.remove_gps(display_image) #remove gps data
+
+            #Thumbnail image
+            thumbnail_image = display_image.copy()
+            thumbnail_image.thumbnail((self.thumbnail_side, self.thumbnail_side), Image.LANCZOS) # create thumbnail
+            thumbnail_stream = io.BytesIO()
+            thumbnail_image.save(thumbnail_stream, format='JPEG', exif=display_exif)
+            thumbnail_stream.seek(0)
+
+            thumbnail_path = f"{group}/thumb"
+            tasks.append(loop.run_in_executor(pool, self.upload_file, thumbnail_stream,  thumbnail_path, filename)) # upload thumbnail image
 
             #Fullsize image
             fullsize_image = display_image.copy()
@@ -158,15 +168,8 @@ class S3Handler:
             fullsize_path = f"{group}/fullsize"
             tasks.append(loop.run_in_executor(pool, self.upload_file, fullsize_stream, fullsize_path, filename)) # upload fullsize image
 
-            #Thumbnail image
-            thumbnail_image = display_image.copy()
-            thumbnail_image.thumbnail((self.thumbnail_side, self.thumbnail_side), Image.LANCZOS) # create thumbnail
-            thumbnail_stream = io.BytesIO()
-            thumbnail_image.save(thumbnail_stream, format='JPEG', exif=display_exif)
-            thumbnail_stream.seek(0)
-
-            thumbnail_path = f"{group}/thumb",
-            tasks.append(loop.run_in_executor(pool, self.upload_file, thumbnail_stream,  thumbnail_path, filename)) # upload thumbnail image
+            original_path = f"{group}/original"
+            tasks.append(loop.run_in_executor(pool, self.upload_file, io.BytesIO(bytes), original_path, filename)) #upload original image
 
         await asyncio.gather(*tasks)
         return {
