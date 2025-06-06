@@ -280,20 +280,30 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         assert 'files' in results, 'Files not in results'
         s3 = boto3.resource("s3")
 
+        #check for results in API response
         assert f"{group}/original/{filename}" in results['files'], "Original name doesn't match"
         assert f"{group}/fullsize/{filename}" in results['files'], "Fullsize name doesn't match"
         assert f"{group}/thumb/{filename}" in results['files'], "Thumbnail name doesn't match"
 
-        for result in results['files']:
-            object = s3.Object(self.bucket_name, result)
-            image = object.get()
-            assert image, "File in new location not found"
-            if result == f"{group}/fullsize/{filename}":
-                fullsize = Image.open(image['Body'])
-                assert fullsize.width == self.s3_handler.fullsize_side
-            elif result == f"{group}/thumb/{filename}":
-                thumb = Image.open(image['Body'])
-                assert thumb.width == self.s3_handler.thumbnail_side
+        #check for original
+        object = s3.Object(self.bucket_name, f"{group}/original/{filename}")
+        image = object.get()
+        assert image, "Original File in new location not found"
+
+        #check for fullsize
+        object = s3.Object(self.bucket_name, f"{group}/fullsize/{filename}")
+        image = object.get()
+        assert image, "Fullsize File in new location not found"
+        #check if fullsize is resized
+        fullsize = Image.open(image['Body'])
+        assert fullsize.width == self.s3_handler.fullsize_side
+
+        #check for thumbnail
+        object = s3.Object(self.bucket_name, f"{group}/thumb/{filename}")
+        image = object.get()
+        assert image, "Thumbnail File in new location not found"
+        thumb = Image.open(image['Body'])
+        assert thumb.width == self.s3_handler.thumbnail_side
 
 
 
