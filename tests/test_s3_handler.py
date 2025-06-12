@@ -296,14 +296,14 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         assert image, "Fullsize File in new location not found"
         #check if fullsize is resized
         fullsize = Image.open(image['Body'])
-        assert fullsize.width == self.s3_handler.fullsize_side
+        assert fullsize.width == self.s3_handler.fullsize_side, "Not resized to fullsize image size"
 
         #check for thumbnail
         object = s3.Object(self.bucket_name, f"{group}/thumb/{filename}")
         image = object.get()
         assert image, "Thumbnail File in new location not found"
         thumb = Image.open(image['Body'])
-        assert thumb.width == self.s3_handler.thumbnail_side
+        assert thumb.width == self.s3_handler.thumbnail_side, "Not resized to thumbnail size"
 
 
 

@@ -16,11 +16,14 @@ from typing_extensions import Annotated
 
 from app.s3_handler import S3Handler
 
+from mangum import Mangum # Use mangum for AWS
+
 import asyncio
 import concurrent.futures
 
 app = FastAPI(lifespan=lifespan) # start FastAPI with lifespan
 print('app:',app)
+
 
 def setup_s3_handler(): #prepare the S3 handler by dependency injection
     s3 = S3Handler()
@@ -303,3 +306,5 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
     s3.delete_image(result['group'], result['filename']) # delete image from s3
 
     return result
+
+handler = Mangum(app=app) # Use Mangum to handle AWS Lambda events
