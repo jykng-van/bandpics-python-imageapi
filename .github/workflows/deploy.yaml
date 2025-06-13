@@ -66,7 +66,7 @@ jobs:
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: bandpics-image-api
-        IMAGE_TAG: v1 latest
+        IMAGE_TAG: latest
       run: |
         docker build -f YOUR_PROJECT_FOLDER/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
