@@ -10,11 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     environment: TEST_PYTHON
     env:
-      MONGO_DB_CONNECTION_STRING: ${secrets.MONGO_DB_CONNECTION_STRING}
-      MONGO_DB_NAME: ${secrets.MONGO_DB_NAME}
-      S3_BUCKET_NAME: ${secrets.S3_BUCKET_NAME}
-      AWS_DEFAULT_REGION: ${secrets.AWS_DEFAULT_REGION}
-      S3_ROLE_ARN: ${secrets.S3_ROLE_ARN}
+      MONGO_DB_CONNECTION_STRING: ${{secrets.MONGO_DB_CONNECTION_STRING}}
+      MONGO_DB_NAME: ${{secrets.MONGO_DB_NAME}}
+      S3_BUCKET_NAME: ${{secrets.S3_BUCKET_NAME}}
+      AWS_DEFAULT_REGION: ${{secrets.AWS_DEFAULT_REGION}}
+      S3_ROLE_ARN: ${{secrets.S3_ROLE_ARN}}
 
     steps:
     - uses: actions/checkout@v4
