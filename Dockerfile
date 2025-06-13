@@ -1,22 +1,9 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12-slim
-
-# Set the working directory in the container
-WORKDIR /app
-
-# Copy the current directory contents into the container at /app
-COPY . /app
-
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Make port 8000 available to the world outside this container
-EXPOSE 8000
-
-# Define environment variable
-ENV NAME=World
-
-# Run app.py when the container launches
-RUN chmod +x entry_script.sh
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-#CMD ["/entry_script.sh","main.handler"]
+FROM public.ecr.aws/lambda/python:3.13
+# Copy function code
+COPY ./app ${LAMBDA_TASK_ROOT}
+# Install the function's dependencies using file requirements.txt
+# from your project folder.
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}" -U --no-cache-dir
+# Set the CMD to your handler (could also be done as a parameter override outside of the Dockerfile)
+CMD [ "main.handler" ]

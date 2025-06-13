@@ -308,3 +308,10 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
     return result
 
 handler = Mangum(app=app) # Use Mangum to handle AWS Lambda events
+
+if __name__ == "__main__":
+   import uvicorn
+   uvicorn.run(app, host="0.0.0.0", port=8080)
+
+#docker build -t bandpics-image-api .
+#docker run -d --name image_api_dev -p 8000:8000 bandpics-image-api
