@@ -1,10 +1,13 @@
 FROM public.ecr.aws/lambda/python:3.13
+
+# Copy requirements file
+COPY ./requirements.txt ${LAMBDA_TASK_ROOT}
+
+# Install dependencies
+RUN pip install -r ${LAMBDA_TASK_ROOT}/requirements.txt --no-cache-dir
+
 # Copy function code
-COPY ./app ${LAMBDA_TASK_ROOT}
-# Install the function's dependencies using file requirements.txt
-# from your project folder.
-COPY requirements.txt .
-RUN pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}" -U --no-cache-dir
+COPY ./app ${LAMBDA_TASK_ROOT}/app/
 
 # !!! Adding code to python path
 ENV PYTHONPATH="$PYTHONPATH:${LAMBDA_TASK_ROOT}"
