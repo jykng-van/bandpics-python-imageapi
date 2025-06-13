@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    name: Build
+    name: Build and Test
     runs-on: ubuntu-latest
     environment: TEST_PYTHON
     env:
@@ -32,3 +32,17 @@ jobs:
       run: |
         pip install pytest pytest-cov pytest-asyncio
         pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=com --cov-report=xml --cov-report=html
+    - name: Build image
+      run: docker build -t bandpics-image-api .
+    - name: Push to ECR
+      id: ecr
+      uses: jwalton/gh-ecr-push@v2
+      with:
+        access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: ${{secrets.AWS_DEFAULT_REGION}}
+        local-image: bandpics-image-api
+        image: bandpics-image-api:v1, bandpics-image-api:latest
+
+
+
