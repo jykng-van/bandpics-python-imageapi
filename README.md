@@ -58,11 +58,15 @@ The images are stored on S3 with the following key paths:
 - Added schemas for images and image groups using Pydantic.
 - Added a class image_handler for extracting the Exif data from images.
 - Added unit tests for image_handler and integrations tests for the API endpoints.
-- Integrated S3 for the storing and management of the image files.
+- Integrated S3 for the storing and management of the image files. (Changes to implementation incoming)
+- Implementing a docker image for the API
+- Added automated testing with Github Actions
+- Added push Docker image to ECR with Github Actions
+- Added update AWS Lambda function with Github Actions
 
 ## To Do
+- Change upload process to use S3 presigned URLs and remove the need to upload the image file in the request body.
+- Implement S3 triggers to the image processing, which would include extract Exif data and resizing the images.
 - Add authentication for the API, using JWT and Incognito.
-- Implementing a docker image for the API
-- Making it AWS Lambda compatible (and probably using docker image as deployment).
 - Possibly adding logging depending on where it's deployed.
 - Possbily having methods to remove GPS data of the images if needed.
