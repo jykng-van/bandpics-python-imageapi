@@ -311,13 +311,14 @@ def make_s3_event(group_id, filename):
               'bucket': {'name': 'test_bucket', 'ownerIdentity': {'principalId': 'AAAAA'}, 'arn': 'arn:aws:s3:::test'},
               'object': {'key': f"original/{group_id}/{filename}", 'size': 1024, 'eTag': 'eTAG', 'sequencer': 'asdfasdfasdf'}}}]}
 @pytest.mark.asyncio
-async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
+async def test_process_image(get_group_id, generate_mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
     filename = 'img1.jpg'
     # Mocked S3 event
     event = make_s3_event(get_group_id, filename)
     context = MagicMock()
 
-    mocker.patch('app.main.connect_to_db', mock_mongodb_image_groups_initialized)
+    mocker.patch('app.main.connect_to_db', generate_mock_mongodb_image_groups_initialized)
+    #app.dependency_overrides[connect_to_db] = generate_mock_mongodb_image_groups_initialized
     mocker.patch('app.main.S3Handler', mock_s3_handler)
 
     image_data = await process_s3_image(event, context)
@@ -327,13 +328,14 @@ async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized
     assert 'filename' in image_data, "Data not found"
     assert 'data' in image_data, "Data not found"
 
-def test_handler(get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
+def test_handler(get_group_id, generate_mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
     filename = 'img1.jpg'
     # Mocked S3 event
     event = make_s3_event(get_group_id, filename)
     context = MagicMock()
 
-    mocker.patch('app.main.connect_to_db', mock_mongodb_image_groups_initialized)
+    mocker.patch('app.main.connect_to_db', generate_mock_mongodb_image_groups_initialized)
+    #app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     mocker.patch('app.main.S3Handler', mock_s3_handler)
 
     image_data = handler(event, context)

@@ -346,7 +346,11 @@ async def process_s3_image(event, context):
         filename = path_parts[-1]
 
         # Depends won't work here because not in FastAPI context
-        db = connect_to_db() # Get db connection
+        dbo = connect_to_db()
+        print(dbo)
+        print(type(dbo))
+        db = next(dbo) # Get db connection
+        print(db)
         s3 = S3Handler() # Get S3 handler
 
         processed_image = await s3.process_image(group_id, filename)

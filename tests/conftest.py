@@ -93,6 +93,20 @@ def mock_mongodb_image_groups_initialized():
         return MockMongoClient(mock_client.db)
 
     return mock_get_mongodb
+@fixture
+def generate_mock_mongodb_image_groups_initialized():
+    def mock_get_mongodb():
+        with MongoClient() as mock_client:
+            mock_client.db.image_groups.insert_one(test_image_group)
+            mock_client.db.images.insert_many(test_images)
+            mock_client.db.image_groups.insert_one(test_image_group2)
+            db = mock_client.db
+            print(mock_client)
+            print(db)
+            print("MongoDB connected.")
+            yield db
+    return mock_get_mongodb
+
 
 
 @fixture
