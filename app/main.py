@@ -18,6 +18,8 @@ from app.s3_handler import S3Handler
 
 from mangum import Mangum # Use mangum for AWS
 
+from starlette.requests import Request
+
 import asyncio
 import concurrent.futures
 
@@ -32,6 +34,10 @@ def setup_s3_handler(): #prepare the S3 handler by dependency injection
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
+
+@app.get("/")
+async def hello(request: Request):
+    return {"aws_event": request.scope["aws.event"]}
 
 ################### IMAGE GROUPS ###################
 # Upload images to the server
