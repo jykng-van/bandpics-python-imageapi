@@ -366,7 +366,10 @@ async def process_s3_image(event, context):
         }},
         return_document=True)
         print(image)
-        image['data']['DateTime'] = image['data']['DateTime'].astimezone(timezone.utc).isoformat() # Convert DateTime to ISO format
+        if 'data' in image and 'DateTime' in image['data']:
+            image['data']['DateTime'] = image['data']['DateTime'].astimezone(timezone.utc).isoformat() # Convert DateTime to ISO format
+        if 'data' in image and 'DateTimeOriginal' in image['data']:
+            image['data']['DateTimeOriginal'] = image['data']['DateTimeOriginal'].astimezone(timezone.utc).isoformat() # Convert DateTime to ISO format
         results = {
             'id': str(image['_id']),
             'filename': image['filename'],
