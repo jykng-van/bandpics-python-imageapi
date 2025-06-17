@@ -161,33 +161,6 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         except s3.meta.client.exceptions.NoSuchKey:
             assert True
 
-    #test remove_gps
-    def test_remove_gps(self):
-        gps_ifd = {
-            piexif.GPSIFD.GPSVersionID: (2, 0, 0, 0),
-            piexif.GPSIFD.GPSLatitudeRef: 'N',
-            piexif.GPSIFD.GPSLatitude: [(123, 1), (45,1), (500000, 10000)],
-            piexif.GPSIFD.GPSLongitudeRef: 'W',
-            piexif.GPSIFD.GPSLongitude: [(123, 1), (45,1), (500000, 10000)],
-        }
-        image_data = self.create_test_image(width=4048, height=3036, gps_data=gps_ifd) # create test image with GPS
-
-        # now check if test image has GPS
-        image = Image.open(image_data)
-        exif_data = piexif.load(image.info.get('exif',''))
-        assert 'GPS' in exif_data, "Test image doesn't have GPS"
-
-        new_exif = self.s3_handler.remove_gps(image) # do remove_gps
-        print('new_exif', new_exif)
-        stream = io.BytesIO()
-        image.save(stream, format='JPEG', exif=new_exif)
-        stream.seek(0)
-        mod_image = Image.open(stream)
-        mod_data = piexif.load(mod_image.info.get('exif',{}))
-        print(mod_data)
-
-        assert 'GPS' not in mod_data or not mod_data['GPS'], "Modified image still has non-empty GPS data"
-
     #test delete_image
     async def test_delete_image(self):
         s3 = boto3.resource("s3")

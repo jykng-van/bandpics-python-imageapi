@@ -366,14 +366,16 @@ async def process_s3_image(event, context):
         }},
         return_document=True)
         print(image)
-
-        return {
+        image['data']['DateTime'] = image['data']['DateTime'].astimezone(timezone.utc).isoformat() # Convert DateTime to ISO format
+        results = {
             'id': str(image['_id']),
             'filename': image['filename'],
             'group': str(image['group']),
             'data': image['data'],
             'files': processed_image['files']
         }
+        print('Processed image results:', results)
+        return results
     else:
         return {'error':'Invalid S3 key format, Expecting "orginal/<group_id>/<filename>"'}
 # This is the handler that AWS Lambda will call first, check event here

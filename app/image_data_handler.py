@@ -1,6 +1,7 @@
 from PIL import Image, ExifTags
 from PIL.ExifTags import TAGS, GPSTAGS
 from datetime import datetime
+import piexif
 import re
 
 class ImageDataHandler:
@@ -78,3 +79,8 @@ class ImageDataHandler:
     def exif_date_to_dt(self, date_str):
         year,month,day,hour,minute,second = map(int, re.split(r":|\s+", date_str)) #split date string and convert to int
         return datetime(year, month, day, hour, minute, second)
+
+    def remove_gps(self, image):
+        exif_data = piexif.load(image.info.get('exif',''))
+        del exif_data['GPS']
+        return piexif.dump(exif_data)

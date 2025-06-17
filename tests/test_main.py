@@ -340,7 +340,6 @@ def test_handler(get_group_id, generate_mock_mongodb_image_groups_initialized, m
 
     image_data = handler(event, context)
     print('image_data:', image_data)
-
     assert image_data['filename'] == filename, "Filename does not match"
     assert 'filename' in image_data, "Data not found"
     assert 'data' in image_data, "Data not found"

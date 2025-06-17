@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 from PIL import Image
 from PIL.ExifTags import TAGS, GPSTAGS
-import piexif
+
 import io
 import asyncio
 import re
@@ -169,7 +169,7 @@ class S3Handler:
             print('Date and coords:', date_and_coords)
 
             #display_image = Image.open(io.BytesIO(bytes))
-            display_exif = self.remove_gps(display_image) #remove gps data
+            display_exif = image_handler.remove_gps(display_image) #remove gps data
 
             #Thumbnail image
             thumbnail_image = display_image.copy()
@@ -208,10 +208,7 @@ class S3Handler:
             ]
         }
 
-    def remove_gps(self, image):
-        exif_data = piexif.load(image.info.get('exif',''))
-        del exif_data['GPS']
-        return piexif.dump(exif_data)
+
 
     async def delete_image(self, group, filename):
         loop = asyncio.get_event_loop()
