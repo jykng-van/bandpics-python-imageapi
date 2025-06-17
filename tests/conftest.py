@@ -135,6 +135,22 @@ def mock_upload_image(*args, **kwargs):
             f"{group}/thumb/{filename}"
         ]
     }
+def mock_presign_file(*args, **kwargs):
+    group = args[0]
+    filename = args[1]
+    return {
+        'presigned_url': f'https://example.com/{group}/{filename}'
+    }
+async def mock_prepare_upload_single_image(*args, **kwargs):
+    group = args[0]
+    filename = args[1]
+    return {
+        '_id': f"id_{group}_{filename}",
+        'filename': filename,
+        'presigned_url': f"https://example.com/{group}/{filename}",
+        #'files':fileinfo['files'],
+        #'data': date_and_coords,
+    }
 @fixture
 def mock_s3_handler():
 

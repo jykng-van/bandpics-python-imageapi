@@ -38,7 +38,7 @@ async def read_root():
 # This endpoint will create a new group of images and return the group id and the images with their coordinates and date
 @app.post("/image_groups")
 @app.post("/image_groups/", response_description="Upload images and create a new image_group")
-async def upload_images(name:str = Form(...), images: list[UploadFile]=File(...), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+async def upload_images(name:str = Form(...), images: list[str] = Form(...), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
     print('Images:', images)
     print('Number of images:', len(images))
 
@@ -68,7 +68,7 @@ async def upload_images(name:str = Form(...), images: list[UploadFile]=File(...)
         'name':name
     }
 # add images to a group, used in upload_images and add to group
-async def add_images_to_group(group_id: str, images: list[UploadFile], db, s3):
+async def add_images_to_group(group_id: str, images: list[str], db, s3):
     print('Number of images:', len(images))
     print('db:', db)
     print(images)
@@ -79,35 +79,64 @@ async def add_images_to_group(group_id: str, images: list[UploadFile], db, s3):
 
     # process each of the images
     for image in images:
-        uploaded = await upload_single_image(group, image, images_collection, s3)
+        uploaded = await prepare_upload_single_image(group, image, images_collection, s3)
         image_data.append(uploaded)
     return image_data # return the list of images
 
-async def upload_single_image(group: ObjectId, image:UploadFile, images_collection, s3):
-    image_content = await image.read() # read image content
+async def prepare_upload_single_image(group: ObjectId, filename: str, images_collection, s3, image_id:ObjectId = None):
+    """ image_content = await image.read() # read image content
     pil_image = Image.open(io.BytesIO(image_content)) # open image content converted to bytes
     print('Filename:', image.filename)
     image_handler = ImageHandler(pil_image) # create ImageHandler
 
     date_and_coords = image_handler.get_date_and_coords() #get dat and coordinates from image
-    print('Date and coords:', date_and_coords)
+    print('Date and coords:', date_and_coords) """
 
-    fileinfo = await s3.upload_image(str(group), image.filename, image_content)
+    #fileinfo = await s3.upload_image(str(group), image.filename, image_content)
+    filename = await s3.check_and_rename_file(str(group), filename) # rename file if it exists
+    print('Filename:', filename)
+    presigned = await s3.presign_file(str(group), filename)
 
     # insert into db
-    inserted_image = images_collection.insert_one({
-        'filename': fileinfo['filename'],
-        'data': date_and_coords,
-        'created_at': datetime.now(timezone.utc),
-        'updated_at': datetime.now(timezone.utc),
-        'group': group
-    })
+    if image_id is not None: # update existing image
+        updated_image = images_collection.find_one_and_update({
+            '_id': image_id
+        },
+        {'$set': {
+            'filename': filename,
+            'updated_at': datetime.now(timezone.utc)
+        }},
+        return_document=True
+        )
+    else: # insert new image
+        inserted_image = images_collection.insert_one({
+            'filename': filename,
+            'data': {},
+            'created_at': datetime.now(timezone.utc),
+            'updated_at': datetime.now(timezone.utc),
+            'group': group
+        })
+        print('Inserted image:', inserted_image)
     return {
-        '_id': str(inserted_image.inserted_id),
-        'filename': fileinfo['filename'],
-        'files':fileinfo['files'],
-        'data': date_and_coords,
+        '_id': str(inserted_image.inserted_id) if image_id is None else str(updated_image['_id']),
+        'filename': filename,
+        'presigned_url': presigned['presigned_url'],
+        #'files':fileinfo['files'],
+        #'data': date_and_coords,
     }
+@app.put("/", response_model=ImageData, response_model_by_alias=False, response_model_exclude_none=True,
+         response_description="Image from S3 done uploading from presigned URL")
+async def process_uploaded_image(event, db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+    print('Event:', event)
+
+    group_id = ObjectId(group_id)
+    image_collection = db.get_collection('images')
+    image = image_collection.find_one({
+        'filename': filename,
+        'group': ObjectId(group_id)
+    })
+    image_id = image['_id'] if image is not None else None
+    print('Image ID:', image_id)
 
 # Get all images in a group
 @app.get("/image_groups/{group_id}", response_model=ImageGroup, response_model_by_alias=False, response_model_exclude_none=True,
@@ -215,7 +244,7 @@ async def delete_group(group_id:str, db=Depends(connect_to_db), s3=Depends(setup
 ################### IMAGES ###################
 # Add images to an existing group
 @app.post("/images/{group_id}", response_description="Upload images to a group")
-async def upload_images_to_group(group_id: str, images: list[UploadFile]=File(...), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+async def upload_images_to_group(group_id: str, images: list[str]=Body(None, embed=True), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
     group_id = ObjectId(group_id) # convert to ObjectId
     print('Group:', group_id)
 
@@ -226,7 +255,7 @@ async def upload_images_to_group(group_id: str, images: list[UploadFile]=File(..
             image_data = await add_images_to_group(str(group_id), images, db, s3)
         else:
             image_data = []
-
+        print('Image data:', image_data)
         return {
             'added_images': image_data,
             'group_id': str(group_id),
@@ -274,14 +303,13 @@ async def edit_image(image_id: str, data:Annotated[UpdateImageData, Body(embed=T
 
     return data_result
 
-@app.patch("/images/{image_id}/file", response_model=ImageData, response_model_by_alias=False, response_model_exclude_none=True,
-    response_description="Edit an image of that id")
-async def replace_image(image_id: str, image:UploadFile, db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+@app.patch("/images/{image_id}/file", response_description="Edit an image of that id")
+async def replace_image(image_id: str, image:str=Body(..., embed=True), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
     print('Image:', image)
     image_id = ObjectId(image_id) # Convert to ObjectId
     image_collection = db.get_collection('images')
 
-    print('Filename:', image.filename)
+    #print('Filename:', image.filename)
 
     old_image = image_collection.find_one({'_id': image_id},{'filename': 1, 'group': 1}) # get old image and group
     if old_image is not None: # if old image exists delete it from s3
@@ -289,7 +317,7 @@ async def replace_image(image_id: str, image:UploadFile, db=Depends(connect_to_d
     else:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
 
-    image_result = await upload_single_image(old_image['group'], image, image_collection, s3)
+    image_result = await prepare_upload_single_image(old_image['group'], image, image_collection, s3)
 
     return image_result
 

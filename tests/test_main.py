@@ -5,10 +5,10 @@ import pytest
 from mongomock import MongoClient
 from datetime import datetime, timezone
 from http import HTTPStatus
-from tests.conftest import mock_upload_image
+from tests.conftest import mock_presign_file, mock_upload_image, mock_prepare_upload_single_image
 from bson.objectid import ObjectId
 
-from app.main import app, add_images_to_group, upload_single_image, setup_s3_handler
+from app.main import app, add_images_to_group, prepare_upload_single_image, setup_s3_handler
 from app.db import connect_to_db
 
 # test get_images
@@ -124,65 +124,82 @@ ImageHandler.return_value.get_date_and_coords.return_value = {
 
 # test upload an image
 @pytest.mark.asyncio
-async def test_upload_single_image(get_group_id,):
+async def test_prepare_upload_single_image(get_group_id):
     mock_mongoclient = MongoClient()
     mock_mongodb = mock_mongoclient.db
-    mock_image = MockUploadImage('test1.jpeg', create_dummy_image('test1','jpeg'))
+    #mock_image = MockUploadImage('test1.jpeg', create_dummy_image('test1','jpeg'))
     images_collection = mock_mongodb.get_collection('image_collection')
 
     #mock s3 related functions
-    s3 = MagicMock()
-    s3.upload_image = AsyncMock(side_effect=mock_upload_image)
-    image_data = await upload_single_image(ObjectId(get_group_id), mock_image, images_collection, s3)
+    s3 = AsyncMock()
+    s3.check_and_rename_file = AsyncMock(return_value=f"original/{get_group_id}/test1.jpeg")
+    presigned_url = 'https://example.com/{get_group_id}/test1.jpeg'
+    s3.presign_file = AsyncMock(return_value={'presigned_url':presigned_url})
+    image_data = await prepare_upload_single_image(ObjectId(get_group_id), 'test1.jpeg', images_collection, s3)
     print(image_data)
     assert '_id' in image_data, 'Image id expected in results'
+    assert 'presigned_url' in image_data, 'Presigned URL expected in results'
+    assert image_data['presigned_url'] == presigned_url, 'Presigned URL does not match'
+
 
 # test add_images_to_group the one that's shared by upload_images and upload_images_to_group
 @pytest.mark.asyncio
 async def test_add_images_to_group(get_group_id):
     mock_mongoclient = MongoClient()
     mock_mongodb = mock_mongoclient.db
-    mock_upload_images = [
-        MockUploadImage('test1.jpeg', create_dummy_image('test1','jpeg')),
-        MockUploadImage('test2.jpeg', create_dummy_image('test2','jpeg')),
+    mock_upload_filenames = [
+        'test1.jpeg',
+        'test2.jpeg',
     ]
 
 
     #mock s3 related functions
     s3 = MagicMock()
-    s3.upload_image = AsyncMock(side_effect=mock_upload_image)
-    image_data = await add_images_to_group(get_group_id, mock_upload_images, mock_mongodb, s3)
+    s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
+    s3.presign_file = AsyncMock(side_effect=mock_presign_file)
+
+    image_data = await add_images_to_group(get_group_id, mock_upload_filenames, mock_mongodb, s3)
     print(image_data)
-    assert len(image_data) == len(mock_upload_images)
-    assert image_data[0]['filename'] == 'test1.jpeg', "Unexpected filename"
-    assert image_data[1]['filename'] == 'test2.jpeg', "Unexpected filename"
+    assert len(image_data) == len(mock_upload_filenames)
+    assert image_data[0]['filename'] == f"{get_group_id}/test1.jpeg", "Unexpected filename"
+    assert 'presigned_url' in image_data[0], "Presigned URL expected"
+    assert image_data[1]['filename'] == f"{get_group_id}/test2.jpeg", "Unexpected filename"
+    assert 'presigned_url' in image_data[1], "Presigned URL expected"
+
 # test upload_images the one that creates a new group
-def test_upload_images(client, mock_mongodb, mock_s3_handler):
+def test_upload_images(client, mock_mongodb, mock_s3_handler, mocker):
     app.dependency_overrides[connect_to_db] = mock_mongodb
     app.dependency_overrides[setup_s3_handler] = mock_s3_handler
     mock_upload_images = [
-        ('images',create_dummy_image_buffered_reader('test1','jpeg')),
-        ('images',create_dummy_image_buffered_reader('test2','jpeg')),
+        'test1.jpeg',
+        'test2.jpeg',
     ]
 
     print('mock_upload_images:', mock_upload_images)
 
-    response = client.post("/image_groups/", data={'name':'test'}, files=mock_upload_images)
+    mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
+    response = client.post("/image_groups/", data={'name':'test', 'images': mock_upload_images})
     print('request:', response.request)
     json = response.json()
     assert response.status_code == HTTPStatus.OK
     assert 'images' in json and len(json['images']) > 0, "No images in group" # check if images are present
 # test upload_images_to_group the one that adds images to an existing group
-def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler):
+async def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     app.dependency_overrides[setup_s3_handler] = mock_s3_handler
-    mock_upload_images = [
-        ('images',create_dummy_image_buffered_reader('test1','jpeg')),
-        ('images',create_dummy_image_buffered_reader('test2','jpeg')),
+    mock_image_files = [
+        'test1.jpeg',
+        'test2.jpeg'
     ]
 
-    print('mock_upload_images:', mock_upload_images)
-    response = client.post("/images/" + str(get_group_id), files=mock_upload_images)
+    print('mock_image_files:', mock_image_files)
+    #mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
+    #mock s3 related functions
+    s3 = MagicMock()
+    s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
+    s3.presign_file = AsyncMock(side_effect=mock_presign_file)
+
+    response = client.post("/images/" + str(get_group_id), json={'images': mock_image_files})
     json = response.json()
     print('json:', json)
     assert response.status_code == HTTPStatus.OK
@@ -240,16 +257,22 @@ def test_edit_image_404(client, mock_mongodb_image_groups_initialized):
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
-def test_edit_image_upload(client, mock_mongodb_image_groups_initialized, get_image_id1, mock_s3_handler):
+def test_edit_image_upload(client, mock_mongodb_image_groups_initialized, get_image_id1, mock_s3_handler, mocker):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     app.dependency_overrides[setup_s3_handler] = mock_s3_handler
 
     filehandle = 'test1'
-    mock_upload_image = create_dummy_image_buffer(filehandle,'jpeg') #('image',create_dummy_image_buffered_reader(filehandle,'jpeg'))
+    mock_filename = 'test1.jpeg'
+    image_changes = {
+        'data':{
+            'image':mock_filename
+        }
+    }
 
 
-    print('mock_upload_image:', mock_upload_image)
-    response = client.patch("/images/" + str(get_image_id1) + "/file", files={'image':mock_upload_image})
+    #print('mock_upload_image:', mock_upload_image)
+    mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
+    response = client.patch("/images/" + str(get_image_id1) + "/file", json={'image':mock_filename})
     json = response.json()
     print('json:', json)
     assert response.status_code == HTTPStatus.OK
@@ -258,8 +281,9 @@ def test_edit_image_upload_404(client, mock_mongodb_image_groups_initialized):
     # we're using our mock_mongodb_image_groups_initialized fixture which has image_groups and images initialized
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     filehandle = 'test1'
-    mock_upload_image = create_dummy_image(filehandle,'jpeg')
-    response = client.patch("/images/" + 'bbbbbbbbbbbbbbbbbbbbbbbb' + '/file', files={'image':mock_upload_image})
+    #mock_upload_image = create_dummy_image(filehandle,'jpeg')
+    mock_filename = 'test1.jpeg'
+    response = client.patch("/images/" + 'bbbbbbbbbbbbbbbbbbbbbbbb' + '/file', json={'image':mock_filename})
 
     assert response.status_code == HTTPStatus.NOT_FOUND
 
