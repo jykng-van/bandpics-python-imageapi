@@ -41,6 +41,15 @@ async def hello(request: Request):
     return {"aws_event": request.scope["aws.event"]}
 
 ################### IMAGE GROUPS ###################
+# Get all image groups
+@app.get("/image_groups/")
+async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
+    groups_collection = db.get_collection('image_groups')
+    groups = groups_collection.find({})
+    group_list = list(groups)
+    return group_list
+
+
 # Upload images to the server
 # This endpoint will create a new group of images and return the group id and the images with their coordinates and date
 @app.post("/image_groups")

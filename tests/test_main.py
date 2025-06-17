@@ -35,6 +35,15 @@ group_changes = {'group':
         'description': 'new description'
     }
 }
+# test list groups
+def test_get_image_groups(client, mock_mongodb_image_groups_initialized):
+    app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+
+    response = client.get("/image_groups/")
+    json = response.json()
+    assert response.status_code == HTTPStatus.OK
+    assert len(json) > 0, "No image groups found"
+
 # test edit_group
 def test_edit_group(client, mock_mongodb_image_groups_initialized, get_group_id):
     # we're using our mock_mongodb_image_groups_initialized fixture which has image_groups and images initialized
