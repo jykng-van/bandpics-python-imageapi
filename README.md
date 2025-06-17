@@ -49,9 +49,9 @@ The API endpoints are CRUD endpoints for images and image groups.
 
 ## S3
 The images are stored on S3 with the following key paths:
-- {group_id}/original/{filename} which contains the original unmodified image with the GPS data, these images might be removed later and are not meant to be used in the gallery
-- {group_id}/fullsize/{filename} which is the resized and modified image, the GPS data has removed here. It's meant to be the fullsize images in the gallery
-- {group_id}/thumb/{filename} which is the thumbnail used for the gallery, there's no GPS data in this one.
+- original/{group_id}/{filename} which contains the original unmodified image with the GPS data, these images might be removed later and are not meant to be used in the gallery
+- fullsize/{group_id}/{filename} which is the resized and modified image, the GPS data has removed here. It's meant to be the fullsize images in the gallery
+- thumb/{group_id}/{filename} which is the thumbnail used for the gallery, there's no GPS data in this one.
 
 ## Things done
 - Added a basic FastAPI app with CRUD endpoints for images and image groups.

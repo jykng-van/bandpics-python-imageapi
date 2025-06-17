@@ -373,12 +373,12 @@ async def process_s3_image(event, context):
     else:
         return {'error':'Invalid S3 key format, Expecting "orginal/<group_id>/<filename>"'}
 # This is the handler that AWS Lambda will call first, check event here
-def handler(event, context):
+async def handler(event, context):
     print('Event:', event)
     print('Context:', context)
     if event.get("Records") and event["Records"][0].get('eventSource') == 'aws:s3': # Check if the event is from S3
         # call the process s3 function
-        return process_s3_image(event, context)
+        return await process_s3_image(event, context)
 
 
     asgi_handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
