@@ -42,6 +42,7 @@ async def hello(request: Request):
 
 ################### IMAGE GROUPS ###################
 # Get all image groups
+@app.get("/image_groups")
 @app.get("/image_groups/")
 async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
     groups_collection = db.get_collection('image_groups')
