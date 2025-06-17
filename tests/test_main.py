@@ -5,10 +5,10 @@ import pytest
 from mongomock import MongoClient
 from datetime import datetime, timezone
 from http import HTTPStatus
-from tests.conftest import mock_presign_file, mock_process_image, mock_prepare_upload_single_image
+from tests.conftest import mock_presign_file, mock_prepare_upload_single_image
 from bson.objectid import ObjectId
 
-from app.main import app, add_images_to_group, prepare_upload_single_image, setup_s3_handler, process_s3_image
+from app.main import app, add_images_to_group, prepare_upload_single_image, setup_s3_handler, process_s3_image, handler
 from app.db import connect_to_db
 
 # test get_images
@@ -298,12 +298,8 @@ def test_delete_image_404(client, mock_mongodb_image_groups_initialized):
     response = client.delete("/images/" + 'bbbbbbbbbbbbbbbbbbbbbbbb')
 
     assert response.status_code == HTTPStatus.NOT_FOUND
-
-@pytest.mark.asyncio
-async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
-    filename = 'img1.jpg'
-    # Mocked S3 event
-    event = {'Records':
+def make_s3_event(group_id, filename):
+    return {'Records':
         [{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'us-west-2', 'eventTime': '2025-01-01T01:01:01.000Z',
           'eventName': 'ObjectCreated:Put',
           'userIdentity': {'principalId': 'AWS:AID234DASDFASDF'},
@@ -313,13 +309,34 @@ async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized
               's3SchemaVersion': '1.0',
               'configurationId': 'image_uploaded',
               'bucket': {'name': 'test_bucket', 'ownerIdentity': {'principalId': 'AAAAA'}, 'arn': 'arn:aws:s3:::test'},
-              'object': {'key': f"original/{get_group_id}/{filename}", 'size': 1024, 'eTag': 'eTAG', 'sequencer': 'asdfasdfasdf'}}}]}
+              'object': {'key': f"original/{group_id}/{filename}", 'size': 1024, 'eTag': 'eTAG', 'sequencer': 'asdfasdfasdf'}}}]}
+@pytest.mark.asyncio
+async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
+    filename = 'img1.jpg'
+    # Mocked S3 event
+    event = make_s3_event(get_group_id, filename)
     context = MagicMock()
 
     mocker.patch('app.main.connect_to_db', mock_mongodb_image_groups_initialized)
     mocker.patch('app.main.S3Handler', mock_s3_handler)
 
     image_data = await process_s3_image(event, context)
+    print('image_data:', image_data)
+
+    assert image_data['filename'] == filename, "Filename does not match"
+    assert 'filename' in image_data, "Data not found"
+    assert 'data' in image_data, "Data not found"
+
+def test_handler(get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler, mocker):
+    filename = 'img1.jpg'
+    # Mocked S3 event
+    event = make_s3_event(get_group_id, filename)
+    context = MagicMock()
+
+    mocker.patch('app.main.connect_to_db', mock_mongodb_image_groups_initialized)
+    mocker.patch('app.main.S3Handler', mock_s3_handler)
+
+    image_data = handler(event, context)
     print('image_data:', image_data)
 
     assert image_data['filename'] == filename, "Filename does not match"
