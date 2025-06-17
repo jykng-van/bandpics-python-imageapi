@@ -323,5 +323,6 @@ async def test_process_image(get_group_id, mock_mongodb_image_groups_initialized
     print('image_data:', image_data)
 
     assert image_data['filename'] == filename, "Filename does not match"
+    assert 'filename' in image_data, "Data not found"
     assert 'data' in image_data, "Data not found"
 
