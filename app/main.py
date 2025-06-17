@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, HTTPException, Depends, Body, Form, Fil
 from fastapi.encoders import jsonable_encoder
 from http import HTTPStatus
 
-from app.image_handler import ImageHandler
+from app.image_data_handler import ImageDataHandler
 #from maps_info import MapsInfo
 from PIL import Image
 from bson.objectid import ObjectId
@@ -131,19 +131,7 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
         #'files':fileinfo['files'],
         #'data': date_and_coords,
     }
-@app.put("/", response_model=ImageData, response_model_by_alias=False, response_model_exclude_none=True,
-         response_description="Image from S3 done uploading from presigned URL")
-async def process_uploaded_image(event, db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
-    print('Event:', event)
 
-    group_id = ObjectId(group_id)
-    image_collection = db.get_collection('images')
-    image = image_collection.find_one({
-        'filename': filename,
-        'group': ObjectId(group_id)
-    })
-    image_id = image['_id'] if image is not None else None
-    print('Image ID:', image_id)
 
 # Get all images in a group
 @app.get("/image_groups/{group_id}", response_model=ImageGroup, response_model_by_alias=False, response_model_exclude_none=True,
@@ -251,7 +239,7 @@ async def delete_group(group_id:str, db=Depends(connect_to_db), s3=Depends(setup
 ################### IMAGES ###################
 # Add images to an existing group
 @app.post("/images/{group_id}", response_description="Upload images to a group")
-async def upload_images_to_group(group_id: str, images: list[str]=Body(None, embed=True), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+async def prepare_upload_images_to_group(group_id: str, images: list[str]=Body(None, embed=True), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
     group_id = ObjectId(group_id) # convert to ObjectId
     print('Group:', group_id)
 
@@ -342,12 +330,49 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
 
     return result
 
+""" {'Records':
+[{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'us-west-2', 'eventTime': '2025-06-17T06:57:27.496Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AIDAU6GDU4TQUJBFM3WMB'}, 'requestParameters': {'sourceIPAddress': '24.85.249.14'}, 'responseElements': {'x-amz-request-id': 'XTKT5Y0HJT7BN324', 'x-amz-id-2': 'A9/s+Ah1Fk6ATqT41NyVg3z6x3o3frjMUMTd1bs8BYpu1mlPzyiVHS1oJcC3+igdrVFRIqSIVmsKRkD7TrrSItYqUMTj8phc'}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'image_uploaded', 'bucket': {'name': 'jykng-bandpics-dev', 'ownerIdentity': {'principalId': 'A29AV6LIL39GY6'}, 'arn': 'arn:aws:s3:::jykng-bandpics-dev'}, 'object': {'key': 'original/OctomobileCloseUp.jpg', 'size': 122510, 'eTag': 'da49dd53bb59cbf1131b8761cc114169', 'sequencer': '00685111D773EB1B62'}}}]} """
+# Process S3 image after upload
+async def process_s3_image(event, context):
+    print('Processing S3 image...')
+    print('Event:', event)
+    s3_event = event["Records"][0]["s3"]
+    #bucket_name = s3_event['bucket']['name']
+    key = s3_event['object']['key']
+
+    path_parts = key.split('/')
+    if (len(path_parts) == 3):
+        group_id = path_parts[1]
+        filename = path_parts[-1]
+
+        # Depends won't work here because not in FastAPI context
+        db = connect_to_db() # Get db connection
+        s3 = S3Handler() # Get S3 handler
+
+        processed_image = await s3.process_image(group_id, filename)
+
+        image_collection = db.get_collection('images')
+        image = image_collection.find_one_and_update({
+            'filename': filename,
+            'group': ObjectId(group_id)
+        },
+        {'$set': {
+            'data': processed_image['data'],
+            'updated_at': datetime.now(timezone.utc)
+        }},
+        return_document=True)
+
+        return image
+    else:
+        return {'error':'Invalid S3 key format, Expecting "orginal/<group_id>/<filename>"'}
+# This is the handler that AWS Lambda will call first, check event here
 def handler(event, context):
     print('Event:', event)
     print('Context:', context)
-    if event.get("some-key"):
-        # Do something or return, etc.
-        return
+    if event.get("Records") and event["Records"][0].get('eventSource') == 'aws:s3': # Check if the event is from S3
+        # call the process s3 function
+        return process_s3_image(event, context)
+
 
     asgi_handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
     response = asgi_handler(event, context) # Call the instance with the event arguments

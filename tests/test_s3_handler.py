@@ -287,29 +287,31 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         assert 'presigned_url' in results, "There must be a presigned URL"
 
     #test upload_image
-    async def test_upload_image(self):
+    async def test_process_image(self):
         filename = 'test_image.jpg'
         width = 4048
         height = 3036
-        group = 'test_upload_image'
+        group = 'test_process_image'
 
-        image_bytes = self.create_test_image(width=width, height=height)
-
-        results = await self.s3_handler.upload_image(group, filename, image_bytes.getvalue())
+        gps_ifd = {
+            piexif.GPSIFD.GPSVersionID: (2, 0, 0, 0),
+            piexif.GPSIFD.GPSLatitudeRef: 'N',
+            piexif.GPSIFD.GPSLatitude: [(123, 1), (45,1), (500000, 10000)],
+            piexif.GPSIFD.GPSLongitudeRef: 'W',
+            piexif.GPSIFD.GPSLongitude: [(123, 1), (45,1), (500000, 10000)],
+        }
+        image_bytes = self.create_test_image(width=width, height=height, gps_data=gps_ifd)
+        s3 = boto3.resource("s3")
+        s3.Object(self.bucket_name, f"original/{group}/{filename}").put(Body=image_bytes)
+        results = await self.s3_handler.process_image(group, filename)
 
         print(results)
         assert 'files' in results, 'Files not in results'
-        s3 = boto3.resource("s3")
+
 
         #check for results in API response
-        #assert f"original/{group}/{filename}" in results['files'], "Original name doesn't match"
         assert f"fullsize/{group}/{filename}" in results['files'], "Fullsize name doesn't match"
         assert f"thumb/{group}/{filename}" in results['files'], "Thumbnail name doesn't match"
-
-        #check for original
-        """ object = s3.Object(self.bucket_name, f"original/{group}/{filename}")
-        image = object.get()
-        assert image, "Original File in new location not found" """
 
         #check for fullsize
         object = s3.Object(self.bucket_name, f"fullsize/{group}/{filename}")
@@ -325,6 +327,9 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         assert image, "Thumbnail File in new location not found"
         thumb = Image.open(image['Body'])
         assert thumb.width == self.s3_handler.thumbnail_side, "Not resized to thumbnail size"
+
+        #check for date and coordinates
+        assert 'data' in results, "Date and coordinates not in results"
 
 
 

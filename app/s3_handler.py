@@ -10,6 +10,7 @@ import asyncio
 import re
 import mimetypes
 from concurrent.futures import ThreadPoolExecutor
+from app.image_data_handler import ImageDataHandler
 
 
 class S3Handler:
@@ -146,21 +147,28 @@ class S3Handler:
         except ClientError as e:
             return {'error': str(e)}
 
-    async def upload_image(self, group, filename, bytes):
+    async def process_image(self, group, filename):
         loop = asyncio.get_event_loop()
         tasks = []
 
-
-        proposed_key = f"thumb/{group}/{filename}"
-        if await self.file_exists(proposed_key): #prevent overwrite
-            new_key = await self.number_matching_files(new_key)
-            filename = os.path.basename(new_key)
-
+        if await self.file_exists(f"original/{group}/{filename}"):
+            print("Yes file exists")
 
         with ThreadPoolExecutor() as pool:
             max_size = self.fullsize_side #max size for longest side
 
-            display_image = Image.open(io.BytesIO(bytes))
+            # get image bytes from S3
+            image_stream = io.BytesIO()
+            print(self.bucket_name, f"orginal/{group}/{filename}")
+            await loop.run_in_executor(pool, lambda: self.s3_client.download_fileobj(self.bucket_name, f"original/{group}/{filename}", image_stream))
+            display_image = Image.open(image_stream)
+            print(display_image)
+            image_handler = ImageDataHandler(display_image) # create ImageDataHandler
+
+            date_and_coords = image_handler.get_date_and_coords() #get dat and coordinates from image
+            print('Date and coords:', date_and_coords)
+
+            #display_image = Image.open(io.BytesIO(bytes))
             display_exif = self.remove_gps(display_image) #remove gps data
 
             #Thumbnail image
@@ -193,8 +201,8 @@ class S3Handler:
         await asyncio.gather(*tasks)
         return {
             'filename':filename,
+            'data': date_and_coords,
             'files':[
-                #f"{original_path}/{filename}",
                 f"{fullsize_path}/{filename}",
                 f"{thumbnail_path}/{filename}",
             ]

@@ -3,7 +3,7 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from datetime import datetime
 import re
 
-class ImageHandler:
+class ImageDataHandler:
     def __init__(self, image:Image.Image):
         #self.image_path = image_path
         self.image = image

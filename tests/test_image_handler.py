@@ -5,11 +5,11 @@ from PIL.ExifTags import TAGS, GPSTAGS
 from datetime import datetime
 #from collections.abc import MutableMapping
 
-from app.image_handler import ImageHandler # We're testing the ImageHandler class
+from app.image_data_handler import ImageDataHandler # We're testing the ImageDataHandler class
 
 class test_image_handler(unittest.TestCase):
 
-    # Mocking exif data and ifd data to simulate the behavior of the ImageHandler class
+    # Mocking exif data and ifd data to simulate the behavior of the ImageDataHandler class
     class mock_exif():
         def __init__(self, data, ifds):
             self._data = data # Mock exif data, which is a dictionary
@@ -48,7 +48,7 @@ class test_image_handler(unittest.TestCase):
 
     # Test get_exif_data to ensure that tags are extracted as expected
     def test_get_exif_data(self):
-        handler = ImageHandler(self.img)
+        handler = ImageDataHandler(self.img)
         results = handler.get_exif_data()
         # Check if the results match
         assert results['DateTime'] == self.testexifdate, "DateTime does not match"
@@ -59,18 +59,18 @@ class test_image_handler(unittest.TestCase):
     def test_convert_degrees_to_decimal(self):
         degrees = (45, 67, 89) # Mock GPS coordinates in degrees, minutes, seconds format
         decimal = float(degrees[0]) + float(degrees[1]) / 60.0 + float(degrees[2]) / 3600.0
-        handler = ImageHandler(self.img)
+        handler = ImageDataHandler(self.img)
         assert handler.convert_degrees_to_decimal(degrees) == decimal, "Degrees conversion failed"
 
     # Test if exif date is converted to datetime object correctly
     def test_exif_date_to_dt(self):
-        handler = ImageHandler(self.img)
+        handler = ImageDataHandler(self.img)
         dt = handler.exif_date_to_dt(self.testexifdate)
         assert dt == self.testdate, "Date conversion failed"
 
     # Test get_date_and_coords to ensure that date information and coords are set
     def test_get_date_and_coords(self):
-        handler = ImageHandler(self.img)
+        handler = ImageDataHandler(self.img)
         results = handler.get_date_and_coords()
         testcoord = self.testgpsdegrees[0] + float(self.testgpsdegrees[1]) / 60.0 +  float(self.testgpsdegrees[2]) / 3600.0
 

@@ -151,9 +151,26 @@ async def mock_prepare_upload_single_image(*args, **kwargs):
         #'files':fileinfo['files'],
         #'data': date_and_coords,
     }
+async def mock_process_image(*args, **kwargs):
+    print('mock_process_image')
+    group = args[0]
+    filename = args[1]
+    return {
+        'filename':filename,
+        'data': {
+            'DateTime': test_created_at,
+            'coords': {
+                'latitude': 1.23,
+                'longitude': 45.6
+            }
+        },
+        'files':[
+            f"fullsize/{group}/{filename}",
+            f"thumb/{group}/{filename}",
+        ]
+    }
 @fixture
 def mock_s3_handler():
-
     def mock_get_s3_handler():
         s3 = MagicMock()
         s3.upload_image = AsyncMock(side_effect=mock_upload_image)
@@ -161,5 +178,6 @@ def mock_s3_handler():
         s3.delete_image = AsyncMock()
         s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
         s3.presign_file = AsyncMock(side_effect=mock_presign_file)
+        s3.process_image = AsyncMock(side_effect=mock_process_image)
         return s3
     return mock_get_s3_handler
