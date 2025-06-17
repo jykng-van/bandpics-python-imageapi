@@ -35,8 +35,9 @@ def setup_s3_handler(): #prepare the S3 handler by dependency injection
 async def read_root():
     return {"Hello": "World"}
 
-@app.get("/")
+@app.post("/")
 async def hello(request: Request):
+    print('Request:',request)
     return {"aws_event": request.scope["aws.event"]}
 
 ################### IMAGE GROUPS ###################
@@ -341,7 +342,7 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
 
     return result
 
-handler = Mangum(app=app) # Use Mangum to handle AWS Lambda events
+handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
 
 if __name__ == "__main__":
    import uvicorn
