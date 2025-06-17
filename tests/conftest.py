@@ -159,5 +159,7 @@ def mock_s3_handler():
         s3.upload_image = AsyncMock(side_effect=mock_upload_image)
         s3.move_image = AsyncMock()
         s3.delete_image = AsyncMock()
+        s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
+        s3.presign_file = AsyncMock(side_effect=mock_presign_file)
         return s3
     return mock_get_s3_handler

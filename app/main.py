@@ -342,7 +342,19 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
 
     return result
 
-handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
+def handler(event, context):
+    print('Event:', event)
+    print('Context:', context)
+    if event.get("some-key"):
+        # Do something or return, etc.
+        return
+
+    asgi_handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
+    response = asgi_handler(event, context) # Call the instance with the event arguments
+
+    return response
+
+#handler = Mangum(app=app, lifespan="off") # Use Mangum to handle AWS Lambda events
 
 if __name__ == "__main__":
    import uvicorn

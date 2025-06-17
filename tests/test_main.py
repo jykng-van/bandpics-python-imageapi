@@ -152,7 +152,6 @@ async def test_add_images_to_group(get_group_id):
         'test2.jpeg',
     ]
 
-
     #mock s3 related functions
     s3 = MagicMock()
     s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
@@ -184,6 +183,7 @@ def test_upload_images(client, mock_mongodb, mock_s3_handler, mocker):
     assert response.status_code == HTTPStatus.OK
     assert 'images' in json and len(json['images']) > 0, "No images in group" # check if images are present
 # test upload_images_to_group the one that adds images to an existing group
+@pytest.mark.asyncio
 async def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_groups_initialized, mock_s3_handler):
     app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
     app.dependency_overrides[setup_s3_handler] = mock_s3_handler
@@ -193,11 +193,6 @@ async def test_upload_images_to_group(client, get_group_id, mock_mongodb_image_g
     ]
 
     print('mock_image_files:', mock_image_files)
-    #mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
-    #mock s3 related functions
-    s3 = MagicMock()
-    s3.check_and_rename_file = AsyncMock(side_effect=lambda prefix, filename: f"{prefix}/{filename}")
-    s3.presign_file = AsyncMock(side_effect=mock_presign_file)
 
     response = client.post("/images/" + str(get_group_id), json={'images': mock_image_files})
     json = response.json()
