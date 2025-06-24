@@ -43,7 +43,8 @@ async def hello(request: Request):
 ################### IMAGE GROUPS ###################
 # Get all image groups
 @app.get("/image_groups")
-@app.get("/image_groups/")
+@app.get("/image_groups/", response_model=list[ImageGroup], response_model_by_alias=False, response_model_exclude_none=True,
+         response_description="Get all image_groups")
 async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
     groups_collection = db.get_collection('image_groups')
     groups = groups_collection.find({})
@@ -109,7 +110,6 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
     date_and_coords = image_handler.get_date_and_coords() #get dat and coordinates from image
     print('Date and coords:', date_and_coords) """
 
-    #fileinfo = await s3.upload_image(str(group), image.filename, image_content)
     filename = await s3.check_and_rename_file(str(group), filename) # rename file if it exists
     print('Filename:', filename)
     presigned = await s3.presign_file(str(group), filename)
@@ -138,8 +138,6 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
         '_id': str(inserted_image.inserted_id) if image_id is None else str(updated_image['_id']),
         'filename': filename,
         'presigned_url': presigned['presigned_url'],
-        #'files':fileinfo['files'],
-        #'data': date_and_coords,
     }
 
 
