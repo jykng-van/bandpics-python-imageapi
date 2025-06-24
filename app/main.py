@@ -42,8 +42,8 @@ async def hello(request: Request):
 
 ################### IMAGE GROUPS ###################
 # Get all image groups
-@app.get("/image_groups")
-@app.get("/image_groups/", response_model=list[ImageGroup], response_model_by_alias=False, response_model_exclude_none=True,
+@app.get("/image_groups/")
+@app.get("/image_groups", response_model=list[ImageGroup], response_model_by_alias=False, response_model_exclude_none=True,
          response_description="Get all image_groups")
 async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
     groups_collection = db.get_collection('image_groups')
@@ -54,8 +54,8 @@ async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
 
 # Upload images to the server
 # This endpoint will create a new group of images and return the group id and the images with their coordinates and date
-@app.post("/image_groups")
-@app.post("/image_groups/", response_description="Upload images and create a new image_group")
+@app.post("/image_groups/")
+@app.post("/image_groups", response_description="Upload images and create a new image_group")
 async def upload_images(name:str = Form(...), images: list[str] = Form(...), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
     print('Images:', images)
     print('Number of images:', len(images))
