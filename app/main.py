@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, HTTPException, Depends, Body, Form, File
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from http import HTTPStatus
 
@@ -25,6 +26,15 @@ import concurrent.futures
 
 app = FastAPI(lifespan=lifespan) # start FastAPI with lifespan
 print('app:',app)
+
+# CORS settings
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def setup_s3_handler(): #prepare the S3 handler by dependency injection
