@@ -153,7 +153,8 @@ def mock_presign_file(*args, **kwargs):
     group = args[0]
     filename = args[1]
     return {
-        'presigned_url': f'https://example.com/{group}/{filename}'
+        'presigned_url': f'https://example.com/{group}/{filename}',
+        'type': 'image/jpeg'
     }
 async def mock_prepare_upload_single_image(*args, **kwargs):
     group = args[0]

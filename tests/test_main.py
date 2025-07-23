@@ -143,7 +143,7 @@ async def test_prepare_upload_single_image(get_group_id):
     s3 = AsyncMock()
     s3.check_and_rename_file = AsyncMock(return_value=f"original/{get_group_id}/test1.jpeg")
     presigned_url = 'https://example.com/{get_group_id}/test1.jpeg'
-    s3.presign_file = AsyncMock(return_value={'presigned_url':presigned_url})
+    s3.presign_file = AsyncMock(return_value={'presigned_url':presigned_url, 'type': 'image/jpeg'})
     image_data = await prepare_upload_single_image(ObjectId(get_group_id), 'test1.jpeg', images_collection, s3)
     print(image_data)
     assert '_id' in image_data, 'Image id expected in results'
