@@ -142,7 +142,7 @@ class S3Handler:
                 ExpiresIn=3600
             ))
 
-            return {'presigned_url': presigned_url}
+            return {'presigned_url': presigned_url, 'type': mimetypes.guess_type(filename)[0]}
 
         except ClientError as e:
             return {'error': str(e)}

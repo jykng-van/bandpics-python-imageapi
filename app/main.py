@@ -148,6 +148,7 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
         '_id': str(inserted_image.inserted_id) if image_id is None else str(updated_image['_id']),
         'filename': filename,
         'presigned_url': presigned['presigned_url'],
+        'type': presigned['type'],
     }
 
 
