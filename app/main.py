@@ -120,9 +120,11 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
     date_and_coords = image_handler.get_date_and_coords() #get dat and coordinates from image
     print('Date and coords:', date_and_coords) """
 
-    filename = await s3.check_and_rename_file(str(group), filename) # rename file if it exists
+    path = await s3.check_and_rename_file(str(group), filename) # rename file if it exists
+    print('Path:', filename)
+    filename = path.split('/')[-1] # get the filename from the path
     print('Filename:', filename)
-    presigned = await s3.presign_file(filename)
+    presigned = await s3.presign_file(path) # get presigned url for the file
     print('presigned', presigned)
     # insert into db
     if image_id is not None: # update existing image
@@ -146,7 +148,7 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
         print('Inserted image:', inserted_image)
     return {
         '_id': str(inserted_image.inserted_id) if image_id is None else str(updated_image['_id']),
-        'filename': filename,
+        'filename': path,
         'presigned_url': presigned['presigned_url'],
         'type': presigned['type'],
     }
@@ -349,9 +351,7 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
 
     return result
 
-""" {'Records':
-[{'eventVersion': '2.1', 'eventSource': 'aws:s3', 'awsRegion': 'us-west-2', 'eventTime': '2025-06-17T06:57:27.496Z', 'eventName': 'ObjectCreated:Put', 'userIdentity': {'principalId': 'AWS:AIDAU6GDU4TQUJBFM3WMB'}, 'requestParameters': {'sourceIPAddress': '24.85.249.14'}, 'responseElements': {'x-amz-request-id': 'XTKT5Y0HJT7BN324', 'x-amz-id-2': 'A9/s+Ah1Fk6ATqT41NyVg3z6x3o3frjMUMTd1bs8BYpu1mlPzyiVHS1oJcC3+igdrVFRIqSIVmsKRkD7TrrSItYqUMTj8phc'}, 's3': {'s3SchemaVersion': '1.0', 'configurationId': 'image_uploaded', 'bucket': {'name': 'jykng-bandpics-dev', 'ownerIdentity': {'principalId': 'A29AV6LIL39GY6'}, 'arn': 'arn:aws:s3:::jykng-bandpics-dev'}, 'object': {'key': 'original/OctomobileCloseUp.jpg', 'size': 122510, 'eTag': 'da49dd53bb59cbf1131b8761cc114169', 'sequencer': '00685111D773EB1B62'}}}]} """
-# Process S3 image after upload
+# Process S3 image after upload, called by handler in response to S3 event
 async def process_s3_image(event, context):
     print('Processing S3 image...')
     print('Event:', event)
