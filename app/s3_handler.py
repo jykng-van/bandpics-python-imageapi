@@ -139,7 +139,8 @@ class S3Handler:
             presigned_url = await loop.run_in_executor(None, lambda: self.s3_client.generate_presigned_url(
                 'put_object',
                 Params={'Bucket': self.bucket_name, 'Key': key},
-                ExpiresIn=3600
+                ExpiresIn=3600,
+                HttpMethod='PUT'
             ))
 
             return {'presigned_url': presigned_url, 'type': mimetypes.guess_type(filename)[0]}
