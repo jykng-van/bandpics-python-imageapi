@@ -138,8 +138,8 @@ class S3Handler:
             mimetype = mimetypes.guess_type(filename)[0]
 
             presigned_url = await loop.run_in_executor(None, lambda: self.s3_client.generate_presigned_url(
-                'put_object',
-                Params={'Bucket': self.bucket_name, 'Key': key, 'Content-Type':mimetype},
+                ClientMethod='put_object',
+                Params={'Bucket': self.bucket_name, 'Key': key, 'ContentType':mimetype},
                 ExpiresIn=3600,
                 HttpMethod='PUT',
             ))
