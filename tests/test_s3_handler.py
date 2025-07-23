@@ -256,7 +256,7 @@ class test_s3_handler(unittest.IsolatedAsyncioTestCase):
         filename = 'test1.jpg'
         group = 'test_presign_file'
 
-        results = await self.s3_handler.presign_file(group, filename)
+        results = await self.s3_handler.presign_file(f"{group}/{filename}")
         assert 'presigned_url' in results, "There must be a presigned URL"
 
     #test upload_image

@@ -131,10 +131,10 @@ class S3Handler:
         except ClientError as e:
             return {'error': str(e)}
 
-    async def presign_file(self, group, filename):
+    async def presign_file(self, filename):
         loop = asyncio.get_event_loop()
         try:
-            key = f"original/{group}/{filename}"
+            key = f"original/{filename}"
 
             presigned_url = await loop.run_in_executor(None, lambda: self.s3_client.generate_presigned_url(
                 'put_object',

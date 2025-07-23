@@ -122,7 +122,7 @@ async def prepare_upload_single_image(group: ObjectId, filename: str, images_col
 
     filename = await s3.check_and_rename_file(str(group), filename) # rename file if it exists
     print('Filename:', filename)
-    presigned = await s3.presign_file(str(group), filename)
+    presigned = await s3.presign_file(filename)
     print('presigned', presigned)
     # insert into db
     if image_id is not None: # update existing image
