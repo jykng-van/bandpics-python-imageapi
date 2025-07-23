@@ -135,15 +135,16 @@ class S3Handler:
         loop = asyncio.get_event_loop()
         try:
             key = f"original/{filename}"
+            mimetype = mimetypes.guess_type(filename)[0]
 
             presigned_url = await loop.run_in_executor(None, lambda: self.s3_client.generate_presigned_url(
                 'put_object',
-                Params={'Bucket': self.bucket_name, 'Key': key},
+                Params={'Bucket': self.bucket_name, 'Key': key, 'Content-Type':mimetype},
                 ExpiresIn=3600,
-                HttpMethod='PUT'
+                HttpMethod='PUT',
             ))
 
-            return {'presigned_url': presigned_url, 'type': mimetypes.guess_type(filename)[0]}
+            return {'presigned_url': presigned_url, 'type': mimetype}
 
         except ClientError as e:
             return {'error': str(e)}
