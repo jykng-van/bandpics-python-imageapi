@@ -335,7 +335,7 @@ async def replace_image(image_id: str, image:str=Body(..., embed=True), db=Depen
     else:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
 
-    image_result = await prepare_upload_single_image(old_image['group'], image, image_collection, s3)
+    image_result = await prepare_upload_single_image(old_image['group'], image, image_collection, s3, image_id)
 
     return image_result
 
