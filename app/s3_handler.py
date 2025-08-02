@@ -243,7 +243,7 @@ class S3Handler:
         folders = ['original', 'fullsize', 'thumb'] # the subfolders to move from
 
         for folder in folders:
-            await self.move_file(filename, f"{folder}/{old_group}", f"{folder}/{new_group}") # move the file
+            tasks.append(self.move_file(filename, f"{folder}/{old_group}", f"{folder}/{new_group}")) # move the file
         results = await asyncio.gather(*tasks)
 
         return results
