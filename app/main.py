@@ -305,10 +305,10 @@ async def edit_image(image_id: str, data:Annotated[UpdateImageData, Body(embed=T
 
     if (len(data) > 0):
         if 'group' in data:
+            print('moving image to another group')
             data['group'] = ObjectId(data['group'])
-        print('moving image to another group')
         data_result = image_collection.find_one_and_update({'_id': image_id}, {'$set': data}, return_document=True) # update image
-        print(data_result)
+        print('edit image result', data_result)
         if data_result is None:
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
         elif 'group' in data:
