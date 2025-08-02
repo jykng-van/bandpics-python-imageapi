@@ -55,6 +55,7 @@ class S3Handler:
 
     # Delete a file from S3
     def delete_file(self, key):
+        print('deleting', key)
         try:
             s3_task = self.s3_client.delete_object(
                 Bucket=self.bucket_name,
@@ -118,6 +119,7 @@ class S3Handler:
         try:
             old_key = f"{old_prefix}/{filename}"
             new_key = await self.check_and_rename_file(new_prefix, filename)
+            print('move file', old_key, new_key)
 
             loop = asyncio.get_event_loop()
             # Copy to new location
