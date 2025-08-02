@@ -217,6 +217,7 @@ class S3Handler:
 
     # Delete an image and all its different sizes from S3
     async def delete_image(self, group, filename):
+        print('s3_handler delete_image', group, filename)
         loop = asyncio.get_event_loop()
         tasks = [] # tasks pool
         folders = ['original', 'fullsize', 'thumb'] # the folders to delete from

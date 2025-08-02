@@ -349,7 +349,7 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
     if result is None:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
     print('delete_image, prepare', result)
-    s3.delete_image(result['group'], result['filename']) # delete image from s3
+    await s3.delete_image(result['group'], result['filename']) # delete image from s3
 
     return result
 
