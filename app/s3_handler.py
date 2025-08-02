@@ -61,8 +61,10 @@ class S3Handler:
                 Bucket=self.bucket_name,
                 Key=key
             )
+            print(s3_task)
             return s3_task
         except ClientError as e:
+            print(str(e))
             return {'error': str(e)}
     # Check if a file exists in S3
     async def file_exists(self, key):
