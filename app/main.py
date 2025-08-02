@@ -249,7 +249,7 @@ async def delete_group(group_id:str, db=Depends(connect_to_db), s3=Depends(setup
     result['removed'] = []
     for image in images:
         result['removed'].append(image['filename'])
-        s3.delete_image(str(group_id), image['filename']) # delete image from s3
+        await s3.delete_image(str(group_id), image['filename']) # delete image from s3
 
 
     #delete images in group
@@ -313,7 +313,7 @@ async def edit_image(image_id: str, data:Annotated[UpdateImageData, Body(embed=T
         elif 'group' in data:
             #move image
             print('move image prepare')
-            s3.move_image(str(data_result['group']), data['group'], data_result['filename'])
+            await s3.move_image(str(data_result['group']), data['group'], data_result['filename'])
 
     else:
         data_result = image_collection.find_one({'_id': image_id})

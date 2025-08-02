@@ -238,6 +238,7 @@ class S3Handler:
 
     # Move an image and all its different sizes from one group to another
     async def move_image(self, old_group, new_group, filename):
+        print('s3_handler move_image', old_group, new_group, filename)
         tasks = []
         folders = ['original', 'fullsize', 'thumb'] # the subfolders to move from
 
