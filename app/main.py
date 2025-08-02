@@ -312,6 +312,7 @@ async def edit_image(image_id: str, data:Annotated[UpdateImageData, Body(embed=T
             raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
         elif 'group' in data:
             #move image
+            print('move image prepare')
             s3.move_image(str(data_result['group']), data['group'], data_result['filename'])
 
     else:
@@ -347,6 +348,7 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
     result = image_collection.find_one_and_delete({'_id': image_id})
     if result is None:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail="Image with that ID not found")
+    print('delete_image, prepare', result)
     s3.delete_image(result['group'], result['filename']) # delete image from s3
 
     return result
