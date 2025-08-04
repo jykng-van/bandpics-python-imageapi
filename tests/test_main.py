@@ -184,11 +184,13 @@ def test_upload_images(client, mock_mongodb, mock_s3_handler, mocker):
     ]
 
     print('mock_upload_images:', mock_upload_images)
+    data = {'group':{'name':'test', 'images': mock_upload_images}}
 
     mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
-    response = client.post("/image_groups/", data={'name':'test', 'images': mock_upload_images})
+    response = client.post("/image_groups/", json=data)
     print('request:', response.request)
     json = response.json()
+    print(json)
     assert response.status_code == HTTPStatus.OK
     assert 'images' in json and len(json['images']) > 0, "No images in group" # check if images are present
 # test upload_images_to_group the one that adds images to an existing group

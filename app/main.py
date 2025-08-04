@@ -12,7 +12,7 @@ import io
 from datetime import datetime, timezone
 
 from app.db import lifespan, connect_to_db
-from app.models import ImageGroup, ImageData, UpdateImageData
+from app.models import ImageGroup, ImageData, UpdateImageData, UpdateGroupData
 from typing_extensions import Annotated
 
 from app.s3_handler import S3Handler
@@ -62,20 +62,32 @@ async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
     return group_list
 
 
-# Upload images to the server
+# Create new image group
 # This endpoint will create a new group of images and return the group id and the images with their coordinates and date
 @app.post("/image_groups/")
 @app.post("/image_groups", response_description="Upload images and create a new image_group")
-async def upload_images(name:str = Form(...), images: list[str] = Form(...), db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
-    print('Images:', images)
-    print('Number of images:', len(images))
+async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=Depends(connect_to_db), s3=Depends(setup_s3_handler)):
+    #exclude None values from the image
+    print(group)
+    print('Removing none from group')
+    group = {
+        k: v for k, v in group.model_dump(by_alias=True).items() if v is not None
+    }
+    print('group', group)
+    if 'images' in group:
+        images = group['images']
+        print('Images:', images)
+        print('Number of images:', len(images))
+    else:
+        images = []
 
     # Add group here
     groups_collection = db.get_collection('image_groups')
-    name = name if not None else datetime.now().strftime("%Y-%m-%d") # Default name as current date
+    name = group['name'] if not None else datetime.now().strftime("%Y-%m-%d") # Default name as current date
     # prepare for insertion
     image_group = {
         'name': name,
+        'description': group['description'] if 'description' in group else '',
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     }

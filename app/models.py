@@ -49,6 +49,12 @@ class UpdateImageData(BaseModel): # update model for image data because of group
     description: Optional[str] = Field(default=None, description="Description of the image")
     group: Optional[str] = Field(default=None, description="Group which the image belongs to")
 
+class UpdateGroupData(BaseModel): # update model for image data because of group id
+    name: Optional[str] = Field(default=None, description="Name of the image group")
+    description: Optional[str] = Field(default=None, description="Description of the image group")
+    event: Optional[str] = Field(default=None, description="Event which group belogs to")
+    images: Optional[list[str]] = Field(default=None, description="List of image names")
+
 
 class ImageGroup(MongoDBModel):
     id: Optional[PyObjectId] = Field(alias='_id', default=None)
