@@ -81,6 +81,9 @@ async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=D
     else:
         images = []
 
+    if 'event' in group:
+        group['event'] = ObjectId(group['event'])
+
     # Add group here
     groups_collection = db.get_collection('image_groups')
     name = group['name'] if not None else datetime.now().strftime("%Y-%m-%d") # Default name as current date
@@ -221,6 +224,9 @@ async def edit_group(group_id: str, group:Annotated[ImageGroup, Body(embed=True)
     print('Group:', group)
     if (len(group) > 0):
         #group['updated_at'] = datetime.now(timezone.utc)
+        if 'event' in group:
+            group['event'] = ObjectId(group['event'])
+
         print('Group:', group)
         update_result = group_collection.find_one_and_update(
             {'_id': group_id}, # find group by id
