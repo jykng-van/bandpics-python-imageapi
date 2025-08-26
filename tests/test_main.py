@@ -43,6 +43,17 @@ def test_get_image_groups(client, mock_mongodb_image_groups_initialized):
     json = response.json()
     assert response.status_code == HTTPStatus.OK
     assert len(json) > 0, "No image groups found"
+    assert len(json) >= 2, "Not all groups found"
+def test_get_image_groups_by_event(client, mock_mongodb_image_groups_initialized, get_event_id):
+    app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+
+
+    response = client.get(f"/image_groups/?event={str(get_event_id)}")
+    json = response.json()
+    print(json)
+    assert response.status_code == HTTPStatus.OK
+    assert len(json) == 1, "More than the filtered groups selected"
+    assert json[0]['event'] == str(get_event_id), "Filtered group id doesn't match"
 
 # test edit_group
 def test_edit_group(client, mock_mongodb_image_groups_initialized, get_group_id):

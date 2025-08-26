@@ -35,6 +35,8 @@ test_group_id = ObjectId('aaaaaaaaaaaaaaaaaaaaaaa1')
 test_image1_id = ObjectId('aaaaaaaaaaaaaaaaaaaaaaa2')
 test_image2_id = ObjectId('aaaaaaaaaaaaaaaaaaaaaaa3')
 test_group2_id = ObjectId('aaaaaaaaaaaaaaaaaaaaaaa4')
+test_event_id = ObjectId('eeeeeeeeeeeeeeeeeeeeeee1')
+test_event2_id = ObjectId('eeeeeeeeeeeeeeeeeeeeeee2')
 test_created_at = datetime(2025,1,1,0,0,0)
 test_image_data = {
     'coords':{
@@ -45,6 +47,7 @@ test_image_data = {
 test_image_group = {
     'name':'test',
     '_id': test_group_id,
+    'event': test_event_id,
     'created_id':test_created_at,
     'updated_at':test_created_at,
 }
@@ -73,6 +76,7 @@ test_image_group2 = {
     '_id': test_group2_id,
     'created_id':test_created_at,
     'updated_at':test_created_at,
+    'event':test_event2_id
 }
 
 # DB with images groups and images for testing
@@ -131,6 +135,12 @@ def get_image_id2():
 @fixture
 def get_group2_id():
     return test_group2_id
+@fixture
+def get_event_id():
+    return test_event_id
+@fixture
+def get_event2_id():
+    return test_event2_id
 @fixture
 def mock_executor():
     def mock_get_executor():

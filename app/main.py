@@ -55,10 +55,36 @@ async def hello(request: Request):
 @app.get("/image_groups/")
 @app.get("/image_groups", response_model=list[ImageGroup], response_model_by_alias=False, response_model_exclude_none=True,
          response_description="Get all image_groups")
-async def get_image_groups(db=Depends(connect_to_db)) -> list[ImageGroup]:
+async def get_image_groups(event: str | None = None, db=Depends(connect_to_db)) -> list[ImageGroup]:
     groups_collection = db.get_collection('image_groups')
-    groups = groups_collection.find({})
-    group_list = list(groups)
+    if event is None: # return all groups no aggregate
+        groups = groups_collection.find({})
+        group_list = list(groups)
+    else: # return groups in event with aggregate
+        print('event_id', event)
+        pipeline = [
+            {
+                '$match':{ #match group id in image_groups
+                    'event': ObjectId(event)
+                }
+            },
+            {
+                '$lookup': { #lookup/join images collections to image_groups
+                    'from': 'images', # using images collection
+                    'localField': '_id', # on group id
+                    'foreignField': 'group', # with group field in images collection
+                    'as': 'images' # results as the images field in image_groups
+                }
+            },
+            {
+                '$project':{
+                    'images.group':0 #exclude group field in images
+                }
+            }
+        ]
+        cursor = groups_collection.aggregate(pipeline=pipeline) # run aggregate query
+        group_list = list(cursor) # convert cursor to list
+    print(group_list)
     return group_list
 
 
