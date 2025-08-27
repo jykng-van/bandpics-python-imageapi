@@ -109,8 +109,7 @@ async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=D
     else:
         images = []
 
-    if 'event' in group:
-        group['event'] = ObjectId(group['event'])
+
 
     # Add group here
     groups_collection = db.get_collection('image_groups')
@@ -122,6 +121,8 @@ async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=D
         'created_at': datetime.now(timezone.utc),
         'updated_at': datetime.now(timezone.utc)
     }
+    if 'event' in group:
+        image_group['event'] = ObjectId(group['event'])
     inserted_group = groups_collection.insert_one(image_group)
     collection_id = inserted_group.inserted_id # get group id
     print(collection_id)
