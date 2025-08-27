@@ -28,13 +28,14 @@ class MongoDBModel(BaseModel):
     model_config = ConfigDict(
         arbitrary_types_allowed = True,
         populate_by_name=True,
+        json_encoders= {ObjectId: str}
     )
     @field_serializer("id", when_used="json", check_fields=False) # Serializer for id field when used in JSON
     def object_id_to_str(self, v: PyObjectId) -> str:
         return str(v) if v else None
 
 class ImageData(MongoDBModel):
-    id: Optional[PyObjectId] = Field(alias='_id', default=None)
+    id: Optional[PyObjectId] = Field(alias='_id', default=None, serialization_alias='id')
     filename: str = Field(description="Image filename", default=None)
     data: dict = Field(description="Image data including date and coordinates", default=None)
 
@@ -57,16 +58,13 @@ class UpdateGroupData(BaseModel): # update model for image data because of group
 
 
 class ImageGroup(MongoDBModel):
-    id: Optional[PyObjectId] = Field(alias='_id', default=None)
+    id: Optional[PyObjectId] = Field(alias='_id', default=None, serialization_alias='id')
     name: Optional[str] = None
 
     images: Optional[list[ImageData]]  = Field(default=None, description="List of images in the group")
     event: Optional[PyObjectId] = Field(default=None, description="Event which the group belongs to")
     description: Optional[str] = Field(default=None, description="Description of the group")
 
-
-
-
-
-
-
+    @field_serializer("event", when_used="json", check_fields=False) # Serializer for id field when used in JSON
+    def field_to_str(self, v: PyObjectId) -> str:
+        return str(v) if v else None

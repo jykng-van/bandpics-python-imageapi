@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from http import HTTPStatus
 
+from typing import List
 from app.image_data_handler import ImageDataHandler
 #from maps_info import MapsInfo
 from PIL import Image
@@ -53,9 +54,9 @@ async def hello(request: Request):
 ################### IMAGE GROUPS ###################
 # Get all image groups
 @app.get("/image_groups/")
-@app.get("/image_groups", response_model=list[ImageGroup], response_model_by_alias=False, response_model_exclude_none=True,
+@app.get("/image_groups", response_model=List[ImageGroup], response_model_by_alias=True, response_model_exclude_none=True,
          response_description="Get all image_groups")
-async def get_image_groups(event: str | None = None, db=Depends(connect_to_db)) -> list[ImageGroup]:
+async def get_image_groups(event: str | None = None, db=Depends(connect_to_db)) -> List[ImageGroup]:
     groups_collection = db.get_collection('image_groups')
     if event is None: # return all groups no aggregate
         groups = groups_collection.find({})
@@ -78,13 +79,14 @@ async def get_image_groups(event: str | None = None, db=Depends(connect_to_db)) 
             },
             {
                 '$project':{
-                    'images.group':0 #exclude group field in images
+                    'images.group':0, #exclude group field in images
                 }
             }
         ]
         cursor = groups_collection.aggregate(pipeline=pipeline) # run aggregate query
         group_list = list(cursor) # convert cursor to list
-    print(group_list)
+
+    print('group list', group_list)
     return group_list
 
 

@@ -18,6 +18,7 @@ def test_get_images(client, mock_mongodb_image_groups_initialized, get_group_id)
     response = client.get("/image_groups/" + str(get_group_id))
 
     json = response.json()
+    print(json)
     assert response.status_code == HTTPStatus.OK
     assert json['name'] == 'test', "Unexpected group name" # check if group name is correct
     assert 'images' in json and len(json['images']) > 0, "No images in group" # check if images are present
@@ -54,6 +55,8 @@ def test_get_image_groups_by_event(client, mock_mongodb_image_groups_initialized
     assert response.status_code == HTTPStatus.OK
     assert len(json) == 1, "More than the filtered groups selected"
     assert json[0]['event'] == str(get_event_id), "Filtered group id doesn't match"
+    assert len(json[0]['images']) > 0, "Images in group"
+    assert 'id' in json[0]['images'][0], "Image does not have id"
 
 # test edit_group
 def test_edit_group(client, mock_mongodb_image_groups_initialized, get_group_id):

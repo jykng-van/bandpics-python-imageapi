@@ -48,7 +48,7 @@ test_image_group = {
     'name':'test',
     '_id': test_group_id,
     'event': test_event_id,
-    'created_id':test_created_at,
+    'created_at':test_created_at,
     'updated_at':test_created_at,
 }
 
@@ -58,7 +58,7 @@ test_images = [
         'filename':'img1.jpg',
         'data': test_image_data,
         'group': test_group_id,
-        'created_id':test_created_at,
+        'created_at':test_created_at,
         'updated_at':test_created_at,
     },
     {
@@ -66,7 +66,7 @@ test_images = [
         'filename':'img2.jpg',
         'data': test_image_data,
         'group': test_group_id,
-        'created_id':test_created_at,
+        'created_at':test_created_at,
         'updated_at':test_created_at,
     }
 ]
@@ -74,7 +74,7 @@ test_images = [
 test_image_group2 = {
     'name':'test2',
     '_id': test_group2_id,
-    'created_id':test_created_at,
+    'created_at':test_created_at,
     'updated_at':test_created_at,
     'event':test_event2_id
 }
