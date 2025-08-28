@@ -110,6 +110,23 @@ def test_delete_group_not_found(client, mock_mongodb_image_groups_initialized):
     assert 'image_group' not in json
     assert json['num_images'] == 0
 
+def test_remove_associated_event(client, mock_mongodb_image_groups_initialized, get_event_id):
+    app.dependency_overrides[connect_to_db] = mock_mongodb_image_groups_initialized
+
+    response = client.patch(f"/events/{str(get_event_id)}/image_groups")
+    json = response.json()
+    print(json)
+    assert response.status_code == HTTPStatus.OK
+    assert json['modified_count'] == 1, "Image groups affected not 1"
+
+    #check if there are no groups with the event
+    db = app.db
+    group_collection = db.get_collection('image_groups')
+    cursor = group_collection.find({'event': get_event_id})
+    groups = list(cursor)
+    assert len(groups) == 0, "Event not removed from groups"
+
+
 # Dummy image creation
 def create_dummy_image_buffer(filename, file_type: str = "jpeg"):
     image_buffer = BytesIO()
@@ -198,7 +215,11 @@ def test_upload_images(client, mock_mongodb, mock_s3_handler, mocker):
     ]
 
     print('mock_upload_images:', mock_upload_images)
-    data = {'group':{'name':'test', 'images': mock_upload_images}}
+    data = {'group':{
+        'name':'test',
+        'images': mock_upload_images,
+        'event':'eeeeeeeeeeeeeeeeeeeeeee1'
+    }}
 
     mocker.patch('app.main.prepare_upload_single_image', mock_prepare_upload_single_image)
     response = client.post("/image_groups/", json=data)

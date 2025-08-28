@@ -104,6 +104,7 @@ async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=D
     print('group', group)
     if 'images' in group:
         images = group['images']
+        del group['images']
         print('Images:', images)
         print('Number of images:', len(images))
     else:
@@ -113,19 +114,19 @@ async def upload_images(group:Annotated[UpdateGroupData, Body(embed=True)], db=D
 
     # Add group here
     groups_collection = db.get_collection('image_groups')
-    name = group['name'] if not None else datetime.now().strftime("%Y-%m-%d") # Default name as current date
+
     # prepare for insertion
-    image_group = {
-        'name': name,
-        'description': group['description'] if 'description' in group else '',
-        'created_at': datetime.now(timezone.utc),
-        'updated_at': datetime.now(timezone.utc)
-    }
+    name =  group['name'] if group['name'] is not None else datetime.now().strftime("%Y-%m-%d") # Default name as current date
+    group['name'] = name
+    group['created_at'] = datetime.now(timezone.utc)
+    group['updated_at'] = datetime.now(timezone.utc)
     if 'event' in group:
-        image_group['event'] = ObjectId(group['event'])
-    inserted_group = groups_collection.insert_one(image_group)
+        group['event'] = ObjectId(group['event'])
+
+    inserted_group = groups_collection.insert_one(group)
     collection_id = inserted_group.inserted_id # get group id
     print(collection_id)
+
 
     # add images to group
     if len(images) > 0:
@@ -304,6 +305,24 @@ async def delete_group(group_id:str, db=Depends(connect_to_db), s3=Depends(setup
 
     return result
 
+#Disassociate Event from all Image groups
+@app.patch("/events/{event_id}/image_groups", response_model_by_alias=False, response_model_exclude_none=True,
+            response_description="Remove event from all image groups")
+async def remove_event_from_groups(event_id:str, db=Depends(connect_to_db)):
+    event_id = ObjectId(event_id) # convert to ObjectId
+    group_collection = db.get_collection('image_groups')
+
+    update_result = group_collection.update_many(
+        {'event': event_id},
+        {'$set':
+            {'event':None}
+        })
+    print(update_result)
+    return {
+        'acknowledged':update_result.acknowledged,
+        'modified_count':update_result.modified_count
+    }
+
 ################### IMAGES ###################
 # Add images to an existing group
 @app.post("/images/{group_id}", response_description="Upload images to a group")
@@ -400,6 +419,8 @@ async def delete_image(image_id:str, db=Depends(connect_to_db), s3=Depends(setup
     await s3.delete_image(result['group'], result['filename']) # delete image from s3
 
     return result
+
+
 
 # Process S3 image after upload, called by handler in response to S3 event
 async def process_s3_image(event, context):
